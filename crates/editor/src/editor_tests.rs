@@ -1914,7 +1914,7 @@ async fn test_move_start_of_paragraph_end_of_paragraph(cx: &mut TestAppContext) 
             .text
             .line_height_in_pixels(window.rem_size())
     });
-    cx.simulate_window_resize(cx.window, size(px(100.), 4. * line_height));
+    cx.simulate_resize(size(px(100.), 4. * line_height));
 
     cx.set_state(
         &r#"ˇone
@@ -2030,8 +2030,7 @@ async fn test_scroll_page_up_page_down(cx: &mut TestAppContext) {
             .text
             .line_height_in_pixels(window.rem_size())
     });
-    let window = cx.window;
-    cx.simulate_window_resize(window, size(px(1000.), 4. * line_height + px(0.5)));
+    cx.simulate_resize(size(px(1000.), 4. * line_height + px(0.5)));
 
     cx.set_state(
         r#"ˇone
@@ -2094,8 +2093,7 @@ async fn test_autoscroll(cx: &mut TestAppContext) {
             .text
             .line_height_in_pixels(window.rem_size())
     });
-    let window = cx.window;
-    cx.simulate_window_resize(window, size(px(1000.), 6. * line_height));
+    cx.simulate_resize(size(px(1000.), 6. * line_height));
 
     cx.set_state(
         r#"ˇone
@@ -2176,8 +2174,7 @@ async fn test_move_page_up_page_down(cx: &mut TestAppContext) {
             .text
             .line_height_in_pixels(window.rem_size())
     });
-    let window = cx.window;
-    cx.simulate_window_resize(window, size(px(100.), 4. * line_height));
+    cx.simulate_resize(size(px(100.), 4. * line_height));
     cx.set_state(
         &r#"
         ˇone
