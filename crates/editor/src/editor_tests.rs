@@ -7407,7 +7407,7 @@ async fn test_multibuffer_format_during_save(cx: &mut TestAppContext) {
 
     let project = Project::test(fs, [path!("/a").as_ref()], cx).await;
     let workspace = cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
-    let cx = &mut VisualTestContext::from_window(*workspace.deref(), cx);
+    let cx = &mut VisualTestContext::from_window(*workspace, cx);
 
     let language_registry = project.read_with(cx, |project, _| project.languages().clone());
     language_registry.add(rust_lang());
@@ -10683,7 +10683,7 @@ async fn test_following_with_multiple_excerpts(cx: &mut TestAppContext) {
         .update(cx, |workspace, _, _| workspace.active_pane().clone())
         .unwrap();
 
-    let cx = &mut VisualTestContext::from_window(*workspace.deref(), cx);
+    let cx = &mut VisualTestContext::from_window(*workspace, cx);
 
     let leader = pane.update_in(cx, |_, window, cx| {
         let multibuffer = cx.new(|_| MultiBuffer::new(ReadWrite));
@@ -10695,7 +10695,7 @@ async fn test_following_with_multiple_excerpts(cx: &mut TestAppContext) {
         leader.update_in(cx, |leader, window, cx| leader.to_state_proto(window, cx));
     let workspace_entity = workspace.root(cx).unwrap();
     let follower_1 = cx
-        .update_window(*workspace.deref(), |_, window, cx| {
+        .update_window(*workspace, |_, window, cx| {
             Editor::from_state_proto(
                 workspace_entity,
                 ViewId {
@@ -10797,7 +10797,7 @@ async fn test_following_with_multiple_excerpts(cx: &mut TestAppContext) {
         leader.update_in(cx, |leader, window, cx| leader.to_state_proto(window, cx));
     let workspace_entity = workspace.root(cx).unwrap();
     let follower_2 = cx
-        .update_window(*workspace.deref(), |_, window, cx| {
+        .update_window(*workspace, |_, window, cx| {
             Editor::from_state_proto(
                 workspace_entity,
                 ViewId {
@@ -13179,7 +13179,7 @@ async fn test_mutlibuffer_in_navigation_history(cx: &mut TestAppContext) {
     .await;
     let project = Project::test(fs, ["/a".as_ref()], cx).await;
     let workspace = cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
-    let cx = &mut VisualTestContext::from_window(*workspace.deref(), cx);
+    let cx = &mut VisualTestContext::from_window(*workspace, cx);
     let multi_buffer_editor = cx.new_window_entity(|window, cx| {
         Editor::new(
             EditorMode::Full,
@@ -15797,7 +15797,7 @@ async fn test_find_enclosing_node_with_task(cx: &mut TestAppContext) {
 
     let project = Project::test(fs, ["/a".as_ref()], cx).await;
     let workspace = cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
-    let cx = &mut VisualTestContext::from_window(*workspace.deref(), cx);
+    let cx = &mut VisualTestContext::from_window(*workspace, cx);
     let buffer = cx.new(|cx| Buffer::local(text, cx).with_language(language, cx));
     let multi_buffer = cx.new(|cx| MultiBuffer::singleton(buffer.clone(), cx));
 
@@ -15871,7 +15871,7 @@ async fn test_folding_buffers(cx: &mut TestAppContext) {
     .await;
     let project = Project::test(fs, [path!("/a").as_ref()], cx).await;
     let workspace = cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
-    let cx = &mut VisualTestContext::from_window(*workspace.deref(), cx);
+    let cx = &mut VisualTestContext::from_window(*workspace, cx);
     let worktree = project.update(cx, |project, cx| {
         let mut worktrees = project.worktrees(cx).collect::<Vec<_>>();
         assert_eq!(worktrees.len(), 1);
@@ -16067,7 +16067,7 @@ async fn test_folding_buffers_with_one_excerpt(cx: &mut TestAppContext) {
     .await;
     let project = Project::test(fs, [path!("/a").as_ref()], cx).await;
     let workspace = cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
-    let cx = &mut VisualTestContext::from_window(*workspace.deref(), cx);
+    let cx = &mut VisualTestContext::from_window(*workspace, cx);
     let worktree = project.update(cx, |project, cx| {
         let mut worktrees = project.worktrees(cx).collect::<Vec<_>>();
         assert_eq!(worktrees.len(), 1);
@@ -16212,7 +16212,7 @@ async fn test_folding_buffer_when_multibuffer_has_only_one_excerpt(cx: &mut Test
     .await;
     let project = Project::test(fs, [path!("/a").as_ref()], cx).await;
     let workspace = cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
-    let cx = &mut VisualTestContext::from_window(*workspace.deref(), cx);
+    let cx = &mut VisualTestContext::from_window(*workspace, cx);
     let worktree = project.update(cx, |project, cx| {
         let mut worktrees = project.worktrees(cx).collect::<Vec<_>>();
         assert_eq!(worktrees.len(), 1);
