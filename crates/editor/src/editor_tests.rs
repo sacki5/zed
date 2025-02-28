@@ -16272,6 +16272,174 @@ async fn test_folding_buffer_when_multibuffer_has_only_one_excerpt(cx: &mut Test
 }
 
 #[gpui::test]
+async fn test_multi_buffer_navigation_with_folded_buffers(cx: &mut TestAppContext) {
+    init_test(cx, |_| {});
+
+    let sample_texts = [
+        "a0\nb0\nc0\nd0\ne0\nf0\ng0\nh0\nj0\nk0\nl0", // will fold
+        "a1\nb1\nc1\nd1\ne1\nf1\ng1\nh1\nj1\nk1\nl1", // don't fold
+        "a2\nb2\nc2\nd2\ne2\nf2\ng2\nh2\nj2\nk2\nl2", // will fold
+        "a3\nb3\nc3\nd3\ne3\nf3\ng3\nh3\nj3\nk3\nl3", // will fold
+    ];
+    let paths = ["0.rs", "1.rs", "2.rs", "3.rs"];
+
+    let fs = FakeFs::new(cx.executor());
+    fs.insert_tree(
+        path!("/example"),
+        json!({
+            paths[0]: sample_texts[0].to_string(),
+            paths[1]: sample_texts[1].to_string(),
+            paths[2]: sample_texts[2].to_string(),
+            paths[3]: sample_texts[3].to_string(),
+        }),
+    )
+    .await;
+    let project = Project::test(fs, [path!("/example").as_ref()], cx).await;
+    let workspace = cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
+    let cx = &mut VisualTestContext::from_window(*workspace, cx);
+    let worktree = project.update(cx, |project, cx| {
+        let mut worktrees = project.worktrees(cx).collect::<Vec<_>>();
+        assert_eq!(worktrees.len(), 1);
+        worktrees.pop().unwrap()
+    });
+    let worktree_id = worktree.update(cx, |worktree, _| worktree.id());
+
+    let mut open_buffers = Vec::new();
+    for path in paths {
+        let opened_buffer = project
+            .update(cx, |project, cx| {
+                project.open_buffer((worktree_id, path), cx)
+            })
+            .await
+            .unwrap();
+        open_buffers.push(opened_buffer);
+    }
+
+    let multi_buffer = cx.new(|cx| {
+        let mut multi_buffer = MultiBuffer::new(ReadWrite);
+        for buffer in &open_buffers {
+            multi_buffer.push_excerpts(
+                buffer.clone(),
+                [ExcerptRange {
+                    context: Point::new(0, 0)..Point::new(4, 0),
+                    primary: None,
+                }],
+                cx,
+            );
+        }
+        multi_buffer
+    });
+    let multi_buffer_editor = cx.new_window_entity(|window, cx| {
+        let mut editor = Editor::new(
+            EditorMode::Full,
+            multi_buffer.clone(),
+            Some(project.clone()),
+            true,
+            window,
+            cx,
+        );
+        editor.set_style(EditorStyle::default(), window, cx);
+        editor.set_visible_line_count(1000.0, window, cx);
+        editor
+    });
+
+    for (i, buffer) in open_buffers.iter().enumerate() {
+        if i == 1 {
+            continue; // fold all but the second buffer
+        }
+        multi_buffer_editor.update(cx, |editor, cx| {
+            editor.fold_buffer(buffer.read(cx).remote_id(), cx);
+        });
+    }
+
+    multi_buffer_editor.update_in(cx, |editor, window, cx| {
+        assert_eq!(
+            editor.selections.newest_anchor().start.buffer_id,
+            Some(open_buffers[0].read(cx).remote_id()),
+        );
+
+        for _ in 0..5 {
+            editor.move_down(&Default::default(), window, cx);
+            assert_eq!(
+                editor.selections.newest_anchor().start.buffer_id,
+                Some(open_buffers[1].read(cx).remote_id()),
+            );
+        }
+
+        editor.move_down(&Default::default(), window, cx);
+        assert_eq!(
+            editor.selections.newest_anchor().start.buffer_id,
+            Some(open_buffers[2].read(cx).remote_id()),
+        );
+
+        editor.move_down(&Default::default(), window, cx);
+        assert_eq!(
+            editor.selections.newest_anchor().start.buffer_id,
+            Some(open_buffers[3].read(cx).remote_id()),
+        );
+
+        editor.move_up(&Default::default(), window, cx);
+        assert_eq!(
+            editor.selections.newest_anchor().start.buffer_id,
+            Some(open_buffers[2].read(cx).remote_id()),
+        );
+
+        for _ in 0..5 {
+            editor.move_up(&Default::default(), window, cx);
+            assert_eq!(
+                editor.selections.newest_anchor().start.buffer_id,
+                Some(open_buffers[1].read(cx).remote_id()),
+            );
+        }
+
+        editor.move_up(&Default::default(), window, cx);
+        assert_eq!(
+            editor.selections.newest_anchor().start.buffer_id,
+            Some(open_buffers[0].read(cx).remote_id()),
+        );
+
+        editor.move_page_down(&Default::default(), window, cx);
+        assert_eq!(
+            editor.selections.newest_anchor().start.buffer_id,
+            Some(open_buffers[3].read(cx).remote_id()),
+        );
+
+        editor.move_page_up(&Default::default(), window, cx);
+        assert_eq!(
+            editor.selections.newest_anchor().start.buffer_id,
+            Some(open_buffers[0].read(cx).remote_id()),
+        );
+
+        editor.move_to_end(&Default::default(), window, cx);
+        // after `move_to_end`, buffer_id is None, move again to fix it
+        // this is undesirable, `move_to_beginning` works like expected
+        editor.move_left(&Default::default(), window, cx);
+        editor.move_right(&Default::default(), window, cx);
+        assert_eq!(
+            editor.selections.newest_anchor().start.buffer_id,
+            Some(open_buffers[3].read(cx).remote_id()),
+        );
+
+        editor.move_to_beginning(&Default::default(), window, cx);
+        assert_eq!(
+            editor.selections.newest_anchor().start.buffer_id,
+            Some(open_buffers[0].read(cx).remote_id()),
+        );
+
+        // TODO: switch to vim mode and run all steps in this scope again (except first assertion)
+        //
+        // replace `move_up`           by k
+        // replace `move_down`         by j
+        // replace `move_page_up`      by ...?? idk
+        // replace `move_page_down`    by ...?? idk
+        // replace `move_to_beginning` by g
+        // replace `move_to_end`       by G
+        //
+        // I tried moving this test to vim.rs but my LSP went bananas, and I need to go OOO rn, sorry
+    });
+}
+
+#[gpui::test]
 async fn test_inline_completion_text(cx: &mut TestAppContext) {
     init_test(cx, |_| {});
 

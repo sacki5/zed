@@ -77,7 +77,7 @@ impl Keymap {
         let binding_indices = self
             .binding_indices_by_action_id
             .get(&action_id)
-            .map_or(&[] as _, SmallVec::as_slice)
+            .map_or_else(<&[_]>::default, SmallVec::as_slice)
             .iter();
 
         binding_indices.filter_map(|ix| {
